@@ -1,0 +1,3 @@
+SUCCESS: TransformerLayer executed successfully with disable_rht=True!
+Output shape: torch.Size([4, 32, 256])
+Output dtype: torch.bfloat16
