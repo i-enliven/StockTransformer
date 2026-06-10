@@ -2,7 +2,7 @@
 
 
 ### Notes
-- Let's try input price*volume to account for the change in volume
+- [x] Let's try input price*volume to account for the change in volume
 - Let's try incorporating feature importance from XGBoost to get a sense of the features that drive the price
 
 ### Training Targets

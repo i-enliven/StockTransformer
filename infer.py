@@ -20,20 +20,24 @@ def main():
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     
-    # 3. Load S&P 500 close prices
-    df = pd.read_csv('/home/ienliven/Projects/arcllm/sp500_close.csv')
-    price_cols = [c for c in df.columns if c != 'Date']
+    # 3. Load S&P 500 close prices and volumes
+    df_close = pd.read_csv('/home/ienliven/Projects/arcllm/sp500_close.csv')
+    df_volume = pd.read_csv('/home/ienliven/Projects/arcllm/sp500_volume.csv')
+    price_cols = [c for c in df_close.columns if c != 'Date']
     ticker_names = price_cols
     
-    # Get last seq_len + 1 days of close prices to calculate seq_len returns
-    last_prices = df[price_cols].values[-(seq_len + 1):] # [seq_len + 1, 500]
+    # Get last seq_len + 1 days of close prices and volumes to calculate seq_len returns
+    last_prices = df_close[price_cols].values[-(seq_len + 1):] # [seq_len + 1, 500]
+    last_volumes = df_volume[price_cols].values[-(seq_len + 1):] # [seq_len + 1, 500]
     
-    # Compute log-returns
-    log_returns = np.log(last_prices[1:] / last_prices[:-1]) # [seq_len, 500]
+    # Compute log-returns of price * volume
+    pv = last_prices * last_volumes
+    pv = np.clip(pv, a_min=1e-8, a_max=None)
+    pv_returns = np.log(pv[1:] / pv[:-1]) # [seq_len, 500]
     
     # Pad input to 512 dimensions (FP4 requirement)
     padded_returns = np.zeros((1, seq_len, 512), dtype=np.float32)
-    padded_returns[0, :, :num_tickers] = log_returns
+    padded_returns[0, :, :num_tickers] = pv_returns
     
     # Convert input to tensor
     X_tensor = torch.tensor(padded_returns, dtype=torch.bfloat16, device=device)

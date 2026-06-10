@@ -9,24 +9,34 @@ import transformer_engine.common.recipe as recipe
 
 def main():
     # 1. Load data and compute log-returns
-    df = pd.read_csv('/home/ienliven/Projects/arcllm/sp500_close.csv')
+    df_close = pd.read_csv('/home/ienliven/Projects/arcllm/sp500_close.csv')
+    df_volume = pd.read_csv('/home/ienliven/Projects/arcllm/sp500_volume.csv')
+    
     # Exclude Date column
-    price_cols = [c for c in df.columns if c != 'Date']
-    prices = df[price_cols].values # [num_days, 500]
+    price_cols = [c for c in df_close.columns if c != 'Date']
+    prices = df_close[price_cols].values # [num_days, 500]
+    volumes = df_volume[price_cols].values # [num_days, 500]
     
     # Compute log returns: R_t = log(P_t / P_{t-1})
-    log_returns = np.log(prices[1:] / prices[:-1]) # [1609, 500]
+    log_returns = np.log(prices[1:] / prices[:-1])
+    
+    # Compute log returns of price * volume
+    pv = prices * volumes
+    pv = np.clip(pv, a_min=1e-8, a_max=None)
+    pv_returns = np.log(pv[1:] / pv[:-1])
     
     # Filter for the last 2 years (approx 504 trading days)
     # 504 returns require 505 price days
     log_returns = log_returns[-504:] # [504, 500]
+    pv_returns = pv_returns[-504:] # [504, 500]
+    
     num_days, num_tickers = log_returns.shape
     print(f"Data shape: {num_days} days, {num_tickers} tickers")
     
     # 2. Build Dataset & Targets
     # Input is padded to 512 dimensions (FP4 requirement)
     padded_returns = np.zeros((num_days, 512), dtype=np.float32)
-    padded_returns[:, :num_tickers] = log_returns
+    padded_returns[:, :num_tickers] = pv_returns
     
     # Targets are binary: 1 if next-day return > 0, else 0
     # Pad to 512 dimensions (FP4 requirement)
@@ -63,7 +73,7 @@ def main():
     r = recipe.NVFP4BlockScaling(disable_rht=True)
     
     # 5. Training Loop
-    epochs = 4000
+    epochs = 1000
     batch_size = 128
     num_samples = train_inputs.size(0)
     
