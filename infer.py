@@ -30,14 +30,14 @@ def main():
     last_prices = df_close[price_cols].values[-(seq_len + 1):] # [seq_len + 1, 500]
     last_volumes = df_volume[price_cols].values[-(seq_len + 1):] # [seq_len + 1, 500]
     
-    # Compute log-returns of price * volume
-    pv = last_prices * last_volumes
-    pv = np.clip(pv, a_min=1e-8, a_max=None)
-    pv_returns = np.log(pv[1:] / pv[:-1]) # [seq_len, 500]
+    # Compute log-returns of prices and volumes separately
+    log_returns = np.log(last_prices[1:] / last_prices[:-1]) # [seq_len, 500]
+    volume_returns = np.log(np.clip(last_volumes[1:], 1e-8, None) / np.clip(last_volumes[:-1], 1e-8, None)) # [seq_len, 500]
     
-    # Pad input to 512 dimensions (FP4 requirement)
-    padded_returns = np.zeros((1, seq_len, 512), dtype=np.float32)
-    padded_returns[0, :, :num_tickers] = pv_returns
+    # Pad input to 1024 dimensions (FP4 requirement)
+    padded_returns = np.zeros((1, seq_len, 1024), dtype=np.float32)
+    padded_returns[0, :, :num_tickers] = log_returns
+    padded_returns[0, :, 500 : 500 + num_tickers] = volume_returns
     
     # Convert input to tensor
     X_tensor = torch.tensor(padded_returns, dtype=torch.bfloat16, device=device)

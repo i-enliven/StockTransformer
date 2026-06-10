@@ -9,8 +9,8 @@ class StockTransformer(nn.Module):
         self.d_model = d_model
         self.seq_len = seq_len
         
-        # Input projection (512 is used because FP4 requires multiples of 16)
-        self.input_proj = te.Linear(512, d_model, bias=True)
+        # Input projection (1024 is used because FP4 requires multiples of 16)
+        self.input_proj = te.Linear(1024, d_model, bias=True)
         
         # Positional Encoding
         self.pos_embed = nn.Parameter(torch.zeros(1, seq_len, d_model))

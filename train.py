@@ -20,23 +20,22 @@ def main():
     # Compute log returns: R_t = log(P_t / P_{t-1})
     log_returns = np.log(prices[1:] / prices[:-1])
     
-    # Compute log returns of price * volume
-    pv = prices * volumes
-    pv = np.clip(pv, a_min=1e-8, a_max=None)
-    pv_returns = np.log(pv[1:] / pv[:-1])
+    # Compute log returns of volume: V_t = log(V_t / V_{t-1})
+    volume_returns = np.log(np.clip(volumes[1:], 1e-8, None) / np.clip(volumes[:-1], 1e-8, None))
     
     # Filter for the last 2 years (approx 504 trading days)
-    # 504 returns require 505 price days
+    # 504 returns require 505 price/volume days
     log_returns = log_returns[-504:] # [504, 500]
-    pv_returns = pv_returns[-504:] # [504, 500]
+    volume_returns = volume_returns[-504:] # [504, 500]
     
     num_days, num_tickers = log_returns.shape
     print(f"Data shape: {num_days} days, {num_tickers} tickers")
     
     # 2. Build Dataset & Targets
-    # Input is padded to 512 dimensions (FP4 requirement)
-    padded_returns = np.zeros((num_days, 512), dtype=np.float32)
-    padded_returns[:, :num_tickers] = pv_returns
+    # Input is padded to 1024 dimensions (FP4 requirement)
+    padded_returns = np.zeros((num_days, 1024), dtype=np.float32)
+    padded_returns[:, :num_tickers] = log_returns
+    padded_returns[:, 500 : 500 + num_tickers] = volume_returns
     
     # Targets are binary: 1 if next-day return > 0, else 0
     # Pad to 512 dimensions (FP4 requirement)
@@ -61,7 +60,7 @@ def main():
         train_inputs.append(X_tensor[t : t + seq_len])
         train_targets.append(Y_tensor[t : t + seq_len])
         
-    train_inputs = torch.stack(train_inputs)     # [num_sequences, seq_len, 512]
+    train_inputs = torch.stack(train_inputs)     # [num_sequences, seq_len, 1024]
     train_targets = torch.stack(train_targets)   # [num_sequences, seq_len, 512]
     
     # 4. Instantiate Model, Optimizer, and Loss function
@@ -73,7 +72,7 @@ def main():
     r = recipe.NVFP4BlockScaling(disable_rht=True)
     
     # 5. Training Loop
-    epochs = 1000
+    epochs = 2000
     batch_size = 128
     num_samples = train_inputs.size(0)
     
@@ -126,7 +125,7 @@ def main():
     with torch.no_grad():
         for t in range(train_end_idx, num_days - 1):
             # Input sequence is the last seq_len days ending at day t
-            seq_x = X_tensor[t - seq_len + 1 : t + 1].unsqueeze(0) # [1, seq_len, 512]
+            seq_x = X_tensor[t - seq_len + 1 : t + 1].unsqueeze(0) # [1, seq_len, 1024]
             
             with te.autocast(enabled=True, recipe=r):
                 out = model(seq_x) # [1, seq_len, 512]

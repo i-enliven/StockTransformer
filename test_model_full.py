@@ -10,7 +10,7 @@ class StockTransformer(nn.Module):
         self.d_model = d_model
         
         # Input projection
-        self.input_proj = te.Linear(512, d_model, bias=True)
+        self.input_proj = te.Linear(1024, d_model, bias=True)
         
         # Positional Encoding
         self.pos_embed = nn.Parameter(torch.zeros(1, seq_len, d_model))
@@ -49,8 +49,8 @@ def main():
     # Recipe
     r = recipe.NVFP4BlockScaling(disable_rht=True)
     
-    # Input tensor: batch=8, seq_len=64, features=512
-    x = torch.randn(8, 64, 512, device='cuda', dtype=torch.bfloat16)
+    # Input tensor: batch=8, seq_len=64, features=1024
+    x = torch.randn(8, 64, 1024, device='cuda', dtype=torch.bfloat16)
     
     # Forward pass
     with te.autocast(enabled=True, recipe=r):
