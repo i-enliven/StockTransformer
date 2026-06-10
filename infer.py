@@ -5,20 +5,41 @@ from model import StockTransformer
 import transformer_engine.pytorch as te
 import transformer_engine.common.recipe as recipe
 
+import os
+import glob
+
 def main():
-    # 1. Load checkpoint
-    checkpoint_path = '/home/ienliven/Projects/arcllm/stock_transformer.pt'
-    print(f"Loading checkpoint from {checkpoint_path}...")
-    checkpoint = torch.load(checkpoint_path)
+    # 1. Find checkpoints (ensemble directory or fallback to single file)
+    checkpoints_dir = '/home/ienliven/Projects/arcllm/checkpoints'
+    fallback_path = '/home/ienliven/Projects/arcllm/stock_transformer.pt'
     
-    num_tickers = checkpoint['num_tickers']
-    seq_len = checkpoint['seq_len']
+    checkpoint_files = []
+    if os.path.exists(checkpoints_dir):
+        checkpoint_files = glob.glob(os.path.join(checkpoints_dir, '*.pt'))
+        
+    if len(checkpoint_files) > 0:
+        print(f"Loading {len(checkpoint_files)} checkpoints from {checkpoints_dir} for ensemble inference...")
+    elif os.path.exists(fallback_path):
+        print(f"No ensemble checkpoints found. Loading single checkpoint from {fallback_path}...")
+        checkpoint_files = [fallback_path]
+    else:
+        raise FileNotFoundError("No model checkpoints found.")
     
-    # 2. Instantiate and load model
+    # Read the first checkpoint to extract metadata
+    first_checkpoint = torch.load(checkpoint_files[0])
+    num_tickers = first_checkpoint['num_tickers']
+    seq_len = first_checkpoint['seq_len']
+    
+    # 2. Instantiate and load all model checkpoints
     device = torch.device('cuda')
-    model = StockTransformer(seq_len=seq_len).to(device=device, dtype=torch.bfloat16)
-    model.load_state_dict(checkpoint['model_state_dict'])
-    model.eval()
+    models = []
+    for cf in checkpoint_files:
+        print(f"Loading model: {os.path.basename(cf)}")
+        model = StockTransformer(seq_len=seq_len).to(device=device, dtype=torch.bfloat16)
+        checkpoint = torch.load(cf) if cf != checkpoint_files[0] else first_checkpoint
+        model.load_state_dict(checkpoint['model_state_dict'])
+        model.eval()
+        models.append(model)
     
     # 3. Load S&P 500 close prices, volumes, and macro data
     df_close = pd.read_csv('/home/ienliven/Projects/arcllm/sp500_close.csv')
@@ -47,34 +68,41 @@ def main():
     # Convert input to tensor
     X_tensor = torch.tensor(padded_returns, dtype=torch.bfloat16, device=device)
     
-    # 4. Model inference
+    # 4. Model inference across ensemble
     r = recipe.NVFP4BlockScaling(disable_rht=True)
+    ensemble_probs = np.zeros(num_tickers, dtype=np.float32)
+    
     with torch.no_grad():
-        with te.autocast(enabled=True, recipe=r):
-            out = model(X_tensor) # [1, seq_len, 512]
+        for model in models:
+            with te.autocast(enabled=True, recipe=r):
+                out = model(X_tensor) # [1, seq_len, 512]
+                
+            # Extract prediction logits for the last time step
+            logits = out[0, -1, :num_tickers] # [500]
+            probs = torch.sigmoid(logits).float().cpu().numpy()
+            ensemble_probs += probs
             
-    # Extract prediction logits for the last time step
-    logits = out[0, -1, :num_tickers] # [500]
-    probs = torch.sigmoid(logits).float().cpu().numpy()
+    # Average probabilities
+    ensemble_probs /= len(models)
     
     # 5. Output top recommendations
     K = 10
-    top_k_indices = np.argsort(probs)[-K:][::-1] # sorted in descending order
+    top_k_indices = np.argsort(ensemble_probs)[-K:][::-1] # sorted in descending order
     
     print("\n" + "="*50)
-    print("  STOCK FORECASTING TRANSFORMER BUY RECOMMENDATIONS")
+    print("  STOCK FORECASTING TRANSFORMER ENSEMBLE BUY RECOMMENDATIONS")
     print("="*50)
     print(f"Top {K} recommended S&P 500 stock tickers to buy for next trading day:")
     for idx, rank in enumerate(top_k_indices, 1):
         ticker = ticker_names[rank]
-        prob = probs[rank]
+        prob = ensemble_probs[rank]
         print(f" Rank {idx:2d}: {ticker:<5} | Buy Probability: {prob:.4%}")
     print("="*50)
     
     # 6. Save all recommendations to CSV
     predictions_df = pd.DataFrame({
         'Ticker': ticker_names,
-        'Buy_Probability': probs
+        'Buy_Probability': ensemble_probs
     }).sort_values(by='Buy_Probability', ascending=False)
     
     predictions_csv_path = '/home/ienliven/Projects/arcllm/predictions.csv'
