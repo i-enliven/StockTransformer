@@ -6,16 +6,28 @@ import numpy as np
 from model import StockTransformer
 import transformer_engine.pytorch as te
 import transformer_engine.common.recipe as recipe
+import random
 
 def main():
+    seed = random.randint(1, 10000)
+    print(f"Seed: {seed}")
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    torch.use_deterministic_algorithms(True)
+    torch.backends.cudnn.deterministic = True
+
     # 1. Load data and compute log-returns
     df_close = pd.read_csv('/home/ienliven/Projects/arcllm/sp500_close.csv')
     df_volume = pd.read_csv('/home/ienliven/Projects/arcllm/sp500_volume.csv')
+    df_macro = pd.read_csv('/home/ienliven/Projects/arcllm/macro_close.csv')
     
     # Exclude Date column
     price_cols = [c for c in df_close.columns if c != 'Date']
     prices = df_close[price_cols].values # [num_days, 500]
     volumes = df_volume[price_cols].values # [num_days, 500]
+    
+    macro_cols = ['BTC-USD', 'ETH-USD', 'GC=F', 'BZ=F', 'DX-Y.NYB', '^TNX', '^VIX']
+    macro_prices = df_macro[macro_cols].values # [num_days, 7]
     
     # Compute log returns: R_t = log(P_t / P_{t-1})
     log_returns = np.log(prices[1:] / prices[:-1])
@@ -23,10 +35,14 @@ def main():
     # Compute log returns of volume: V_t = log(V_t / V_{t-1})
     volume_returns = np.log(np.clip(volumes[1:], 1e-8, None) / np.clip(volumes[:-1], 1e-8, None))
     
+    # Compute log returns of macro/crypto assets
+    macro_returns = np.log(macro_prices[1:] / macro_prices[:-1])
+    
     # Filter for the last 2 years (approx 504 trading days)
     # 504 returns require 505 price/volume days
     log_returns = log_returns[-504:] # [504, 500]
     volume_returns = volume_returns[-504:] # [504, 500]
+    macro_returns = macro_returns[-504:] # [504, 7]
     
     num_days, num_tickers = log_returns.shape
     print(f"Data shape: {num_days} days, {num_tickers} tickers")
@@ -36,6 +52,7 @@ def main():
     padded_returns = np.zeros((num_days, 1024), dtype=np.float32)
     padded_returns[:, :num_tickers] = log_returns
     padded_returns[:, 500 : 500 + num_tickers] = volume_returns
+    padded_returns[:, 1000 : 1000 + len(macro_cols)] = macro_returns
     
     # Targets are binary: 1 if next-day return > 0, else 0
     # Pad to 512 dimensions (FP4 requirement)
@@ -72,8 +89,8 @@ def main():
     r = recipe.NVFP4BlockScaling(disable_rht=True)
     
     # 5. Training Loop
-    epochs = 2000
-    batch_size = 128
+    epochs = 1000
+    batch_size = 256
     num_samples = train_inputs.size(0)
     
     print("Starting training...")
@@ -135,7 +152,7 @@ def main():
             probs = torch.sigmoid(logits).float().cpu().numpy()
             
             # Select top K stocks with the highest buy probability
-            K = 10
+            K = 50
             top_k_indices = np.argsort(probs)[-K:]
             
             # Next day returns (t+1)
