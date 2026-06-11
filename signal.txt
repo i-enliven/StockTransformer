@@ -1,87 +1,130 @@
-Rank 1: WELL | Buy Probability: 71.4844%
-Rank 2: GD | Buy Probability: 71.4844%
-Rank 3: CTVA | Buy Probability: 70.7031%
-Rank 4: AJG | Buy Probability: 70.7031%
-Rank 5: NCLH | Buy Probability: 70.7031%
-Rank 6: IT | Buy Probability: 70.3125%
-Rank 7: ADI | Buy Probability: 69.9219%
-Rank 8: CF | Buy Probability: 69.9219%
-Rank 9: FICO | Buy Probability: 69.5312%
-Rank 10: META | Buy Probability: 67.9688%
-
-Rank 1: DOV | Buy Probability: 78.9062%
-Rank 2: DOC | Buy Probability: 76.9531%
-Rank 3: LH | Buy Probability: 76.5625%
-Rank 4: UDR | Buy Probability: 76.5625%
-Rank 5: ARES | Buy Probability: 76.5625%
-Rank 6: ROP | Buy Probability: 75.7812%
-Rank 7: USB | Buy Probability: 75.7812%
-Rank 8: PLD | Buy Probability: 74.6094%
-Rank 9: AFL | Buy Probability: 73.8281%
-Rank 10: CRH | Buy Probability: 73.4375%
-
-Rank 1: SYF | Buy Probability: 77.7344%
-Rank 2: CBRE | Buy Probability: 75.3906%
-Rank 3: BX | Buy Probability: 75.0000%
-Rank 4: FDX | Buy Probability: 74.6094%
-Rank 5: L | Buy Probability: 74.6094%
-Rank 6: DHR | Buy Probability: 74.6094%
-Rank 7: FISV | Buy Probability: 73.8281%
-Rank 8: CAT | Buy Probability: 73.4375%
-Rank 9: RTX | Buy Probability: 73.4375%
-Rank 10: MCO | Buy Probability: 73.4375%
-
-Rank 1: KLAC | Buy Probability: 69.1406%
-Rank 2: MDT | Buy Probability: 67.5781%
-Rank 3: WM | Buy Probability: 64.8438%
-Rank 4: GL | Buy Probability: 64.4531%
-Rank 5: AEE | Buy Probability: 64.0625%
-Rank 6: CF | Buy Probability: 63.6719%
-Rank 7: DTE | Buy Probability: 63.2812%
-Rank 8: EVRG | Buy Probability: 63.2812%
-Rank 9: EQIX | Buy Probability: 63.2812%
-Rank 10: GNRC | Buy Probability: 63.2812%
-
-Rank 1: SATS | Buy Probability: 66.7969%
-Rank 2: TSCO | Buy Probability: 66.7969%
-Rank 3: GRMN | Buy Probability: 66.0156%
-Rank 4: AMZN | Buy Probability: 65.6250%
-Rank 5: ROL | Buy Probability: 65.2344%
-Rank 6: FICO | Buy Probability: 64.4531%
-Rank 7: ARES | Buy Probability: 64.4531%
-Rank 8: TMO | Buy Probability: 64.4531%
-Rank 9: WBD | Buy Probability: 64.4531%
-Rank 10: PNC | Buy Probability: 64.4531%
-
-Rank 1: MAR | Buy Probability: 62.8906%
-Rank 2: IP | Buy Probability: 62.1094%
-Rank 3: PODD | Buy Probability: 62.1094%
-Rank 4: UAL | Buy Probability: 62.1094%
-Rank 5: ARES | Buy Probability: 62.1094%
-Rank 6: XEL | Buy Probability: 61.7188%
-Rank 7: FDX | Buy Probability: 61.3281%
-Rank 8: REG | Buy Probability: 61.3281%
-Rank 9: BAC | Buy Probability: 61.3281%
-Rank 10: HUM | Buy Probability: 60.9375%
-
-Rank 1: ATO | Buy Probability: 64.4531%
-Rank 2: MPC | Buy Probability: 64.0625%
-Rank 3: PM | Buy Probability: 62.5000%
-Rank 4: INCY | Buy Probability: 62.1094%
-Rank 5: PTC | Buy Probability: 61.7188%
-Rank 6: AKAM | Buy Probability: 61.7188%
-Rank 7: GNRC | Buy Probability: 61.3281%
-Rank 8: IRM | Buy Probability: 61.3281%
-Rank 9: CBOE | Buy Probability: 60.9375%
-Rank 10: SCHW | Buy Probability: 60.5469%
-
-Rank 1: ORLY | Buy Probability: 69.1406%
-Rank 2: COHR | Buy Probability: 65.6250%
-Rank 3: ALLE | Buy Probability: 65.6250%
-Rank 4: NDAQ | Buy Probability: 65.2344%
-Rank 5: CVX | Buy Probability: 65.2344%
-Rank 6: CAH | Buy Probability: 64.4531%
-Rank 7: FIX | Buy Probability: 64.0625%
-Rank 8: OTIS | Buy Probability: 64.0625%
-Rank 9: SYF | Buy Probability: 63.6719%
-Rank 10: MDT | Buy Probability: 63.2812%
+ Rank  1: L     | Buy Probability: 56.8945%
+ Rank  2: COST  | Buy Probability: 56.8359%
+ Rank  3: ATO   | Buy Probability: 56.2305%
+ Rank  4: SPGI  | Buy Probability: 56.1133%
+ Rank  5: WRB   | Buy Probability: 55.9961%
+ Rank  6: RTX   | Buy Probability: 55.8398%
+ Rank  7: CAH   | Buy Probability: 55.6250%
+ Rank  8: IBKR  | Buy Probability: 55.2734%
+ Rank  9: TDG   | Buy Probability: 55.1562%
+ Rank 10: STT   | Buy Probability: 55.1172%
+ Rank  1: EME   | Buy Probability: 56.5039%
+ Rank  2: STT   | Buy Probability: 56.5039%
+ Rank  3: KLAC  | Buy Probability: 56.4453%
+ Rank  4: GE    | Buy Probability: 56.3672%
+ Rank  5: SPGI  | Buy Probability: 56.3086%
+ Rank  6: TDG   | Buy Probability: 55.8203%
+ Rank  7: COR   | Buy Probability: 55.8008%
+ Rank  8: L     | Buy Probability: 55.7422%
+ Rank  9: MO    | Buy Probability: 55.5273%
+ Rank 10: WRB   | Buy Probability: 55.4297%
+ Rank  1: NDAQ  | Buy Probability: 57.3438%
+ Rank  2: VMC   | Buy Probability: 57.1094%
+ Rank  3: CBOE  | Buy Probability: 56.7578%
+ Rank  4: GS    | Buy Probability: 56.2305%
+ Rank  5: L     | Buy Probability: 56.1719%
+ Rank  6: TDG   | Buy Probability: 56.0547%
+ Rank  7: HCA   | Buy Probability: 56.0547%
+ Rank  8: PM    | Buy Probability: 55.6445%
+ Rank  9: WDC   | Buy Probability: 55.5078%
+ Rank 10: EME   | Buy Probability: 55.4297%
+ Rank  1: RSG   | Buy Probability: 57.1094%
+ Rank  2: PM    | Buy Probability: 57.0508%
+ Rank  3: JPM   | Buy Probability: 56.7578%
+ Rank  4: AIZ   | Buy Probability: 56.6797%
+ Rank  5: DTE   | Buy Probability: 56.2500%
+ Rank  6: AFL   | Buy Probability: 56.1719%
+ Rank  7: STT   | Buy Probability: 56.1523%
+ Rank  8: APH   | Buy Probability: 56.1133%
+ Rank  9: EME   | Buy Probability: 56.0156%
+ Rank 10: GL    | Buy Probability: 55.8008%
+ Rank  1: GL    | Buy Probability: 57.6563%
+ Rank  2: TDG   | Buy Probability: 57.3438%
+ Rank  3: GRMN  | Buy Probability: 56.4258%
+ Rank  4: GE    | Buy Probability: 56.4062%
+ Rank  5: APH   | Buy Probability: 56.3281%
+ Rank  6: C     | Buy Probability: 56.1914%
+ Rank  7: GM    | Buy Probability: 56.0938%
+ Rank  8: OKE   | Buy Probability: 55.8984%
+ Rank  9: WDC   | Buy Probability: 55.6836%
+ Rank 10: CME   | Buy Probability: 55.6641%
+ Rank  1: IRM   | Buy Probability: 57.2461%
+ Rank  2: ATO   | Buy Probability: 56.9336%
+ Rank  3: PM    | Buy Probability: 56.8359%
+ Rank  4: FICO  | Buy Probability: 56.6016%
+ Rank  5: IBM   | Buy Probability: 56.3281%
+ Rank  6: EME   | Buy Probability: 56.2500%
+ Rank  7: HWM   | Buy Probability: 56.1328%
+ Rank  8: L     | Buy Probability: 55.9961%
+ Rank  9: BNY   | Buy Probability: 55.9766%
+ Rank 10: GRMN  | Buy Probability: 55.9375%
+ Rank  1: CIEN  | Buy Probability: 57.6953%
+ Rank  2: FTNT  | Buy Probability: 56.8750%
+ Rank  3: DTE   | Buy Probability: 56.3867%
+ Rank  4: PM    | Buy Probability: 56.2305%
+ Rank  5: HCA   | Buy Probability: 56.0938%
+ Rank  6: BNY   | Buy Probability: 56.0938%
+ Rank  7: EVRG  | Buy Probability: 56.0156%
+ Rank  8: EA    | Buy Probability: 55.8203%
+ Rank  9: GE    | Buy Probability: 55.8203%
+ Rank 10: CBOE  | Buy Probability: 55.7422%
+ Rank  1: CBOE  | Buy Probability: 57.3828%
+ Rank  2: CAH   | Buy Probability: 57.2266%
+ Rank  3: HIG   | Buy Probability: 57.0898%
+ Rank  4: BAC   | Buy Probability: 56.4844%
+ Rank  5: IRM   | Buy Probability: 56.3281%
+ Rank  6: T     | Buy Probability: 56.2891%
+ Rank  7: GE    | Buy Probability: 56.2695%
+ Rank  8: FDX   | Buy Probability: 56.2500%
+ Rank  9: IBM   | Buy Probability: 55.9570%
+ Rank 10: GILD  | Buy Probability: 55.7813%
+ Rank  1: HWM   | Buy Probability: 57.4414%
+ Rank  2: AJG   | Buy Probability: 57.3438%
+ Rank  3: GM    | Buy Probability: 56.6797%
+ Rank  4: ATO   | Buy Probability: 56.4844%
+ Rank  5: HIG   | Buy Probability: 56.0547%
+ Rank  6: CME   | Buy Probability: 55.9766%
+ Rank  7: EME   | Buy Probability: 55.9375%
+ Rank  8: OTIS  | Buy Probability: 55.7422%
+ Rank  9: APO   | Buy Probability: 55.5469%
+ Rank 10: CTAS  | Buy Probability: 55.4297%
+ Rank  1: HIG   | Buy Probability: 56.7187%
+ Rank  2: DTE   | Buy Probability: 56.0156%
+ Rank  3: TRGP  | Buy Probability: 55.8594%
+ Rank  4: WRB   | Buy Probability: 55.8594%
+ Rank  5: MA    | Buy Probability: 55.8203%
+ Rank  6: ORLY  | Buy Probability: 55.8008%
+ Rank  7: APH   | Buy Probability: 55.6641%
+ Rank  8: GL    | Buy Probability: 55.6250%
+ Rank  9: D     | Buy Probability: 55.2148%
+ Rank 10: EVRG  | Buy Probability: 55.1953%
+ Rank  1: TDG   | Buy Probability: 57.1094%
+ Rank  2: GE    | Buy Probability: 57.0703%
+ Rank  3: ATO   | Buy Probability: 56.7578%
+ Rank  4: CTVA  | Buy Probability: 56.5234%
+ Rank  5: FISV  | Buy Probability: 56.3281%
+ Rank  6: FIX   | Buy Probability: 56.0742%
+ Rank  7: L     | Buy Probability: 55.8203%
+ Rank  8: EME   | Buy Probability: 55.7422%
+ Rank  9: AMP   | Buy Probability: 55.6250%
+ Rank 10: V     | Buy Probability: 55.5078%
+ Rank  1: WRB   | Buy Probability: 57.8125%
+ Rank  2: EME   | Buy Probability: 56.3672%
+ Rank  3: JPM   | Buy Probability: 56.2891%
+ Rank  4: AFL   | Buy Probability: 56.2500%
+ Rank  5: MSI   | Buy Probability: 56.1133%
+ Rank  6: PM    | Buy Probability: 56.0742%
+ Rank  7: ABBV  | Buy Probability: 55.8203%
+ Rank  8: AVGO  | Buy Probability: 55.7422%
+ Rank  9: WMT   | Buy Probability: 55.7031%
+ Rank 10: AKAM  | Buy Probability: 55.5469%
+ Rank  1: MNST  | Buy Probability: 56.0547%
+ Rank  2: HLT   | Buy Probability: 55.9766%
+ Rank  3: EME   | Buy Probability: 55.9570%
+ Rank  4: APH   | Buy Probability: 55.7031%
+ Rank  5: GLW   | Buy Probability: 55.5469%
+ Rank  6: AFL   | Buy Probability: 55.5078%
+ Rank  7: BA    | Buy Probability: 55.5078%
+ Rank  8: RSG   | Buy Probability: 55.4883%
+ Rank  9: STT   | Buy Probability: 55.3320%
+ Rank 10: HII   | Buy Probability: 55.3125%

@@ -65,30 +65,41 @@ def main():
     X_tensor = torch.tensor(padded_returns, dtype=torch.bfloat16, device=device)
     Y_tensor = torch.tensor(padded_targets, dtype=torch.bfloat16, device=device)
 
-    # 3. Create Train / Test split chronologically (80/20 split)
-    train_end_idx = 800
+    # 3. Create Train / Test split chronologically (Validation at the beginning, training at the end)
+    val_ratio = 0.10
+    val_end_idx = int(num_days * val_ratio)
     seq_len = 64 
 
     train_inputs = []
     train_targets = []
-    for t in range(train_end_idx - seq_len):
+    for t in range(val_end_idx - seq_len, num_days - seq_len):
         train_inputs.append(X_tensor[t : t + seq_len])
         train_targets.append(Y_tensor[t : t + seq_len])
         
     train_inputs = torch.stack(train_inputs) 
     train_targets = torch.stack(train_targets) 
-
+    
     # Recipe for FP4 Block Scaling on Blackwell GPUs
     r = recipe.NVFP4BlockScaling(disable_rht=True)
 
     # 4. Ensemble Training Loop
-    num_seeds = 10
+    num_seeds = 3
     seeds = [random.randint(1, 10000) for _ in range(num_seeds)]
     print(f"Training ensemble of {num_seeds} models with seeds: {seeds}")
     
     epochs = 400
-    batch_size = 512
+    batch_size = 256
     num_samples = train_inputs.size(0)
+    
+    # Noise Regularization Parameters
+    input_noise_std = 0.01
+    gradient_noise_std = 1e-5
+    
+    # Active features mask for input noise to protect zero padding
+    mask = torch.zeros(1024, dtype=torch.bfloat16, device=device)
+    mask[:num_tickers] = 1.0
+    mask[500 : 500 + num_tickers] = 1.0
+    mask[1000 : 1000 + len(macro_cols)] = 1.0
     
     for seed_idx, seed in enumerate(seeds, 1):
         print(f"\n--- Training Model {seed_idx}/{num_seeds} (Seed: {seed}) ---")
@@ -106,8 +117,12 @@ def main():
             epoch_loss = 0.0
             for i in range(0, num_samples, batch_size):
                 batch_idx = indices[i : i + batch_size]
-                bx = train_inputs[batch_idx]
+                bx = train_inputs[batch_idx].clone()  # Clone to avoid in-place corruption of train_inputs
                 by = train_targets[batch_idx]
+                
+                # Input Noise Injection
+                if input_noise_std > 0:
+                    bx = bx + torch.randn_like(bx) * input_noise_std * mask
                 
                 optimizer.zero_grad()
                 with te.autocast(enabled=True, recipe=r):
@@ -116,6 +131,14 @@ def main():
                     loss = raw_loss[:, :, :num_tickers].mean()
                     
                 loss.backward()
+                
+                # Gradient Noise Injection
+                if gradient_noise_std > 0:
+                    for param in model.parameters():
+                        if param.grad is not None:
+                            noise = torch.randn_like(param.grad) * gradient_noise_std
+                            param.grad.add_(noise)
+                            
                 optimizer.step()
                 epoch_loss += loss.item() * len(batch_idx)
                 
@@ -148,7 +171,7 @@ def main():
     benchmark_capital = 1.0
     
     with torch.no_grad():
-        for t in range(train_end_idx, num_days - 1):
+        for t in range(seq_len - 1, val_end_idx - 1):
             seq_x = X_tensor[t - seq_len + 1 : t + 1].unsqueeze(0) 
             
             ensemble_probs = np.zeros(num_tickers)
