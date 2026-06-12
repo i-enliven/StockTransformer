@@ -85,6 +85,20 @@ def main():
     all_ma50_ratio = np.log(prices / ma50)[1:]
     all_ma200_ratio = np.log(prices / ma200)[1:]
     
+    # Compute Moving Averages for macro prices
+    df_macro_prices = pd.DataFrame(macro_prices)
+    macro_ma20 = df_macro_prices.rolling(window=20).mean().values
+    macro_ma50 = df_macro_prices.rolling(window=50).mean().values
+    macro_ma200 = df_macro_prices.rolling(window=200).mean().values
+
+    macro_ma20 = np.clip(macro_ma20, eps, None)
+    macro_ma50 = np.clip(macro_ma50, eps, None)
+    macro_ma200 = np.clip(macro_ma200, eps, None)
+
+    all_macro_ma20_ratio = np.log(macro_prices / macro_ma20)[1:]
+    all_macro_ma50_ratio = np.log(macro_prices / macro_ma50)[1:]
+    all_macro_ma200_ratio = np.log(macro_prices / macro_ma200)[1:]
+    
     # Slice the last seq_len days for inference safely
     log_returns = all_log_returns[-seq_len:]
     volume_returns = all_volume_returns[-seq_len:]
@@ -92,6 +106,9 @@ def main():
     ma20_ratio = all_ma20_ratio[-seq_len:]
     ma50_ratio = all_ma50_ratio[-seq_len:]
     ma200_ratio = all_ma200_ratio[-seq_len:]
+    macro_ma20_ratio = all_macro_ma20_ratio[-seq_len:]
+    macro_ma50_ratio = all_macro_ma50_ratio[-seq_len:]
+    macro_ma200_ratio = all_macro_ma200_ratio[-seq_len:]
     
     # Pad input to 3072 dimensions
     padded_returns = np.zeros((1, seq_len, 3072), dtype=np.float32)
@@ -101,6 +118,9 @@ def main():
     padded_returns[0, :, 1100 : 1100 + num_tickers] = ma20_ratio
     padded_returns[0, :, 1600 : 1600 + num_tickers] = ma50_ratio
     padded_returns[0, :, 2100 : 2100 + num_tickers] = ma200_ratio
+    padded_returns[0, :, 2600 : 2600 + len(macro_cols)] = macro_ma20_ratio
+    padded_returns[0, :, 2610 : 2610 + len(macro_cols)] = macro_ma50_ratio
+    padded_returns[0, :, 2620 : 2620 + len(macro_cols)] = macro_ma200_ratio
     
     X_tensor = torch.tensor(padded_returns, dtype=torch.bfloat16, device=device)
     

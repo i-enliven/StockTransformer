@@ -54,6 +54,20 @@ def main():
     ma50_ratio = np.log(prices / ma50)[1:]
     ma200_ratio = np.log(prices / ma200)[1:]
 
+    # Compute Moving Averages for macro prices
+    df_macro_prices = pd.DataFrame(macro_prices)
+    macro_ma20 = df_macro_prices.rolling(window=20).mean().values
+    macro_ma50 = df_macro_prices.rolling(window=50).mean().values
+    macro_ma200 = df_macro_prices.rolling(window=200).mean().values
+
+    macro_ma20 = np.clip(macro_ma20, eps, None)
+    macro_ma50 = np.clip(macro_ma50, eps, None)
+    macro_ma200 = np.clip(macro_ma200, eps, None)
+
+    macro_ma20_ratio = np.log(macro_prices / macro_ma20)[1:]
+    macro_ma50_ratio = np.log(macro_prices / macro_ma50)[1:]
+    macro_ma200_ratio = np.log(macro_prices / macro_ma200)[1:]
+
     # Filter for the last 4 years (approx 1008 trading days)
     log_returns = log_returns[-1008:] 
     volume_returns = volume_returns[-1008:] 
@@ -61,6 +75,9 @@ def main():
     ma20_ratio = ma20_ratio[-1008:]
     ma50_ratio = ma50_ratio[-1008:]
     ma200_ratio = ma200_ratio[-1008:] 
+    macro_ma20_ratio = macro_ma20_ratio[-1008:]
+    macro_ma50_ratio = macro_ma50_ratio[-1008:]
+    macro_ma200_ratio = macro_ma200_ratio[-1008:] 
 
     num_days, num_tickers = log_returns.shape
     print(f"Data shape: {num_days} days, {num_tickers} tickers")
@@ -73,6 +90,9 @@ def main():
     padded_returns[:, 1100 : 1100 + num_tickers] = ma20_ratio
     padded_returns[:, 1600 : 1600 + num_tickers] = ma50_ratio
     padded_returns[:, 2100 : 2100 + num_tickers] = ma200_ratio
+    padded_returns[:, 2600 : 2600 + len(macro_cols)] = macro_ma20_ratio
+    padded_returns[:, 2610 : 2610 + len(macro_cols)] = macro_ma50_ratio
+    padded_returns[:, 2620 : 2620 + len(macro_cols)] = macro_ma200_ratio
 
     # Use a safe maximum dimension for targets to avoid uninitialized data slicing anomalies
     padded_targets = np.zeros((num_days, 512), dtype=np.float32)
@@ -122,6 +142,9 @@ def main():
     mask[1100 : 1100 + num_tickers] = 1.0
     mask[1600 : 1600 + num_tickers] = 1.0
     mask[2100 : 2100 + num_tickers] = 1.0
+    mask[2600 : 2600 + len(macro_cols)] = 1.0
+    mask[2610 : 2610 + len(macro_cols)] = 1.0
+    mask[2620 : 2620 + len(macro_cols)] = 1.0
     
     for seed_idx, seed in enumerate(seeds, 1):
         print(f"\n--- Training Model {seed_idx}/{num_seeds} (Seed: {seed}) ---")
