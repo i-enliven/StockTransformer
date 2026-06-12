@@ -135,7 +135,7 @@ def main():
     seeds = [random.randint(1, 10000) for _ in range(num_seeds)]
     print(f"Training ensemble of {num_seeds} models with seeds: {seeds}")
     
-    epochs = 400
+    epochs = 300
     batch_size = 256
     num_samples = train_inputs.size(0)
     
@@ -218,10 +218,13 @@ def main():
         torch.save(checkpoint, checkpoint_path)
         print(f"Saved checkpoint to {checkpoint_path}")
 
-    # 5. Backtest on Val/Test split using the ensemble (WITH FRICTION)
+    # ---------------------------------------------------------
+    # STEP 5: Backtest with Rank Hysteresis & Friction
+    # ---------------------------------------------------------
     print("\nRunning backtest with the ensemble of models...")
     models = []
     for seed in seeds:
+        # Ensure these dimensions match your current rolled-back architecture
         m = StockTransformer(d_feat=3072, seq_len=seq_len).to(device=device, dtype=torch.bfloat16)
         checkpoint_path = f'{checkpoints_dir}/stock_transformer_seed_{seed}.pt'
         checkpoint = torch.load(checkpoint_path)
@@ -232,13 +235,17 @@ def main():
     portfolio_capital = 1.0
     benchmark_capital = 1.0
     
-    # 10 bps total friction (approx 0.1% per trade for slippage + fees)
+    # Friction parameters (10 bps)
     friction_bps = 0.0010 
-    previous_top_k = set()
     
+    # Hysteresis parameters
+    K_target = 50
+    drop_threshold = 100
+    previous_portfolio = set()
     turnover_history = []
     
     with torch.no_grad():
+        # Evaluating across the strict validation slice (1-Day Horizon)
         for t in range(train_end_idx + seq_len - 1, num_days - 1):
             seq_x = X_tensor[t - seq_len + 1 : t + 1].unsqueeze(0) 
             
@@ -251,32 +258,43 @@ def main():
                 ensemble_probs += probs
             ensemble_probs /= len(models)
             
-            K = 50
-            top_k_indices = np.argsort(ensemble_probs)[-K:]
-            current_top_k = set(top_k_indices)
+            # --- RANK HYSTERESIS LOGIC ---
+            sorted_indices = np.argsort(ensemble_probs)[::-1] # Highest to lowest prob
+            top_75_set = set(sorted_indices[:drop_threshold])
             
-            # Calculate daily portfolio turnover (how many new stocks were bought)
-            if len(previous_top_k) > 0:
-                turnover_count = len(current_top_k - previous_top_k)
+            if len(previous_portfolio) == 0:
+                current_portfolio = set(sorted_indices[:K_target])
             else:
-                turnover_count = K # First day, buy all K
+                # 1. Keep stocks from the previous portfolio that are still in the Top 75
+                current_portfolio = previous_portfolio.intersection(top_75_set)
                 
-            turnover_ratio = turnover_count / K
+                # 2. Fill the remaining slots with the highest-ranked available stocks
+                needed = K_target - len(current_portfolio)
+                if needed > 0:
+                    candidates = [idx for idx in sorted_indices if idx not in current_portfolio]
+                    current_portfolio.update(candidates[:needed])
+                    
+            current_portfolio = set(current_portfolio)
             
+            # Calculate turnover and apply friction
+            if len(previous_portfolio) > 0:
+                turnover_count = len(current_portfolio - previous_portfolio)
+            else:
+                turnover_count = K_target 
+                
+            turnover_ratio = turnover_count / K_target
             turnover_history.append(turnover_ratio)
             
             next_day_returns = log_returns[t + 1] 
-            portfolio_day_return = np.mean(next_day_returns[top_k_indices])
+            portfolio_day_return = np.mean(next_day_returns[list(current_portfolio)])
             
-            # Apply friction to the percentage of the portfolio that turned over
             friction_penalty = turnover_ratio * friction_bps
-            
             portfolio_capital *= np.exp(portfolio_day_return - friction_penalty)
             
             benchmark_day_return = np.mean(next_day_returns)
             benchmark_capital *= np.exp(benchmark_day_return)
             
-            previous_top_k = current_top_k
+            previous_portfolio = current_portfolio
 
     print("Backtest complete!")
     print(f"Final Ensemble Portfolio Capital (after friction): {portfolio_capital:.4f}")
