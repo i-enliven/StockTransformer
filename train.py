@@ -136,7 +136,7 @@ def main():
     seeds = [random.randint(1, 10000) for _ in range(num_seeds)]
     print(f"Training ensemble of {num_seeds} models with seeds: {seeds}")
     
-    epochs = 400
+    epochs = 1000
     batch_size = 256
     num_samples = train_inputs.size(0)
     
@@ -245,10 +245,12 @@ def main():
     friction_bps = 0.0010
     
     # Hysteresis parameters
-    K_target = 20
-    drop_threshold = 200
+    K_target = 50
+    drop_threshold = 100
     previous_portfolio = set()
     turnover_history = []
+
+    print(f"Backtest params -> K_target: {K_target}, drop_threshold: {drop_threshold}, friction_bps: {friction_bps}")
     
     with torch.no_grad():
         # Evaluating across the strict validation slice (1-Day Horizon)

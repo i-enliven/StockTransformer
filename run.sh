@@ -3,8 +3,8 @@
 # Clear or initialize the output file before starting the new experiment
 > signal.txt
 
-for run in {1..7}; do 
-    echo "=== Starting Run $run/7 ==="
+for run in {1..5}; do 
+    echo "=== Starting Run $run/5 ==="
     
     # 1. Run training. If it fails, print an error but do not crash the loop.
     if ! uv run python train.py; then

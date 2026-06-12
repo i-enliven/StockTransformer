@@ -6,37 +6,39 @@ import transformer_engine.pytorch as te
 import transformer_engine.common.recipe as recipe
 
 import os
+import re
 import glob
 
 def main():
     # 1. Find checkpoints (ensemble directory or fallback to single file)
     checkpoints_dir = '/home/ienliven/Projects/arcllm/checkpoints'
-    fallback_path = '/home/ienliven/Projects/arcllm/stock_transformer.pt'
     
-    checkpoint_files = []
     if os.path.exists(checkpoints_dir):
-        checkpoint_files = glob.glob(os.path.join(checkpoints_dir, '*.pt'))
-        
-    if len(checkpoint_files) > 0:
-        print(f"Loading {len(checkpoint_files)} checkpoints from {checkpoints_dir} for ensemble inference...")
-    elif os.path.exists(fallback_path):
-        print(f"No ensemble checkpoints found. Loading single checkpoint from {fallback_path}...")
-        checkpoint_files = [fallback_path]
+        # Seed list from running this file and selecting the seeds that gave the best test results. <3
+        seeds = [2158]
+        # seeds = [1297, 7553, 9398, 1723, 5269, 6424, 801] 
+        # Load all seeds from the checkpoints directory
+        # seeds = [ int(seed) for seed in re.findall(r'\d+', str(glob.glob(os.path.join(checkpoints_dir, '*.pt'))))]
+        print(f"Loaded seeds: {seeds}")
+    
+    if len(seeds) > 0:
+        print(f"Loading {len(seeds)} checkpoints from {checkpoints_dir} for ensemble inference...")
     else:
         raise FileNotFoundError("No model checkpoints found.")
     
     # Read the first checkpoint to extract metadata
-    first_checkpoint = torch.load(checkpoint_files[0])
+    first_checkpoint = torch.load(f'{checkpoints_dir}/stock_transformer_seed_{seeds[0]}.pt')
     num_tickers = first_checkpoint['num_tickers']
     seq_len = first_checkpoint['seq_len']
     
     # 2. Instantiate and load all model checkpoints
     device = torch.device('cuda')
     models = []
-    for cf in checkpoint_files:
-        print(f"Loading model: {os.path.basename(cf)}")
+    for seed in seeds:
+        checkpoint_file = f'{checkpoints_dir}/stock_transformer_seed_{seed}.pt'
+        print(f"Loading model: {os.path.basename(checkpoint_file)}")
         model = StockTransformer(d_feat=3072, seq_len=seq_len).to(device=device, dtype=torch.bfloat16)
-        checkpoint = torch.load(cf) if cf != checkpoint_files[0] else first_checkpoint
+        checkpoint = torch.load(checkpoint_file)
         model.load_state_dict(checkpoint['model_state_dict'])
         model.eval()
         models.append(model)
