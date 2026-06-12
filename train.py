@@ -218,7 +218,7 @@ def main():
         torch.save(checkpoint, checkpoint_path)
         print(f"Saved checkpoint to {checkpoint_path}")
 
-    # 5. Backtest on Val/Test split using the ensemble
+    # 5. Backtest on Val/Test split using the ensemble (WITH FRICTION)
     print("\nRunning backtest with the ensemble of models...")
     models = []
     for seed in seeds:
@@ -232,10 +232,15 @@ def main():
     portfolio_capital = 1.0
     benchmark_capital = 1.0
     
+    # 10 bps total friction (approx 0.1% per trade for slippage + fees)
+    friction_bps = 0.0010 
+    previous_top_k = set()
+    
+    turnover_history = []
+    
     with torch.no_grad():
-        # Evaluating across the strict validation slice (chronological future)
         for t in range(train_end_idx + seq_len - 1, num_days - 1):
-            seq_x = X_tensor[t - seq_len + 1 : t + 1].unsqueeze(0)
+            seq_x = X_tensor[t - seq_len + 1 : t + 1].unsqueeze(0) 
             
             ensemble_probs = np.zeros(num_tickers)
             for m in models:
@@ -248,18 +253,35 @@ def main():
             
             K = 50
             top_k_indices = np.argsort(ensemble_probs)[-K:]
+            current_top_k = set(top_k_indices)
+            
+            # Calculate daily portfolio turnover (how many new stocks were bought)
+            if len(previous_top_k) > 0:
+                turnover_count = len(current_top_k - previous_top_k)
+            else:
+                turnover_count = K # First day, buy all K
+                
+            turnover_ratio = turnover_count / K
+            
+            turnover_history.append(turnover_ratio)
             
             next_day_returns = log_returns[t + 1] 
             portfolio_day_return = np.mean(next_day_returns[top_k_indices])
             
-            portfolio_capital *= np.exp(portfolio_day_return)
+            # Apply friction to the percentage of the portfolio that turned over
+            friction_penalty = turnover_ratio * friction_bps
+            
+            portfolio_capital *= np.exp(portfolio_day_return - friction_penalty)
             
             benchmark_day_return = np.mean(next_day_returns)
             benchmark_capital *= np.exp(benchmark_day_return)
+            
+            previous_top_k = current_top_k
 
     print("Backtest complete!")
-    print(f"Final Ensemble Portfolio Capital: {portfolio_capital:.4f}")
+    print(f"Final Ensemble Portfolio Capital (after friction): {portfolio_capital:.4f}")
     print(f"Final S&P 500 Benchmark Capital: {benchmark_capital:.4f}")
+    print(f"Average Daily Turnover: {np.mean(turnover_history) * 100:.2f}%")
 
 if __name__ == "__main__":
     main()
