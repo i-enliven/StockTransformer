@@ -80,7 +80,7 @@ def main():
     
     # 3. Download Macro/Crypto Data
     print("\nDownloading macro/crypto assets history from Yahoo Finance...")
-    macro_symbols = ['BTC-USD', 'ETH-USD', 'GC=F', 'BZ=F', 'DX-Y.NYB', '^TNX', '^VIX']
+    macro_symbols = ['BTC-USD', 'ETH-USD', 'GC=F', 'BZ=F', 'DX-Y.NYB', '^TNX', '^VIX', '^IXIC', '^DJI', '^RUT']
     raw_macro = yf.download(macro_symbols, start=start_date, group_by='column')
     
     # Get Close prices dataframe

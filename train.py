@@ -18,7 +18,6 @@ def main():
         shutil.rmtree(checkpoints_dir)
     os.makedirs(checkpoints_dir)
     
-    # FIXED: Disabled deterministic mode to allow Blackwell Transformer Engine operations
     torch.backends.cudnn.deterministic = False
     
     # 1. Load data and compute log-returns
@@ -29,10 +28,9 @@ def main():
     price_cols = [c for c in df_close.columns if c != 'Date']
     prices = df_close[price_cols].values 
     volumes = df_volume[price_cols].values 
-    macro_cols = ['BTC-USD', 'ETH-USD', 'GC=F', 'BZ=F', 'DX-Y.NYB', '^TNX', '^VIX']
+    macro_cols = ['BTC-USD', 'ETH-USD', 'GC=F', 'BZ=F', 'DX-Y.NYB', '^TNX', '^VIX', '^IXIC', '^DJI', '^RUT']
     macro_prices = df_macro[macro_cols].values 
 
-    # FIXED: Handled potential zero volume elements cleanly before fractional returns
     eps = 1e-8
     prices = np.clip(prices, eps, None)
     volumes = np.clip(volumes, eps, None)
@@ -42,37 +40,60 @@ def main():
     volume_returns = np.log(volumes[1:] / volumes[:-1])
     macro_returns = np.log(macro_prices[1:] / macro_prices[:-1])
 
+    # Compute Moving Averages and avoid lookahead bias by removing bfill
+    df_prices = pd.DataFrame(prices)
+    ma20 = df_prices.rolling(window=20).mean().values
+    ma50 = df_prices.rolling(window=50).mean().values
+    ma200 = df_prices.rolling(window=200).mean().values
+
+    ma20 = np.clip(ma20, eps, None)
+    ma50 = np.clip(ma50, eps, None)
+    ma200 = np.clip(ma200, eps, None)
+
+    ma20_ratio = np.log(prices / ma20)[1:]
+    ma50_ratio = np.log(prices / ma50)[1:]
+    ma200_ratio = np.log(prices / ma200)[1:]
+
     # Filter for the last 4 years (approx 1008 trading days)
     log_returns = log_returns[-1008:] 
     volume_returns = volume_returns[-1008:] 
     macro_returns = macro_returns[-1008:] 
+    ma20_ratio = ma20_ratio[-1008:]
+    ma50_ratio = ma50_ratio[-1008:]
+    ma200_ratio = ma200_ratio[-1008:] 
 
     num_days, num_tickers = log_returns.shape
     print(f"Data shape: {num_days} days, {num_tickers} tickers")
 
     # 2. Build Dataset & Targets
-    padded_returns = np.zeros((num_days, 1024), dtype=np.float32)
+    padded_returns = np.zeros((num_days, 3072), dtype=np.float32)
     padded_returns[:, :num_tickers] = log_returns
     padded_returns[:, 500 : 500 + num_tickers] = volume_returns
     padded_returns[:, 1000 : 1000 + len(macro_cols)] = macro_returns
+    padded_returns[:, 1100 : 1100 + num_tickers] = ma20_ratio
+    padded_returns[:, 1600 : 1600 + num_tickers] = ma50_ratio
+    padded_returns[:, 2100 : 2100 + num_tickers] = ma200_ratio
 
+    # Use a safe maximum dimension for targets to avoid uninitialized data slicing anomalies
     padded_targets = np.zeros((num_days, 512), dtype=np.float32)
     binary_targets = (log_returns > 0).astype(np.float32)
     padded_targets[:-1, :num_tickers] = binary_targets[1:] 
 
     device = torch.device('cuda')
-    # BFloat16 matrix representation
     X_tensor = torch.tensor(padded_returns, dtype=torch.bfloat16, device=device)
     Y_tensor = torch.tensor(padded_targets, dtype=torch.bfloat16, device=device)
 
-    # 3. Create Train / Test split chronologically (Validation at the beginning, training at the end)
+    # 3. Secure Train / Test split chronologically
     val_ratio = 0.10
     val_end_idx = int(num_days * val_ratio)
     seq_len = 64 
 
     train_inputs = []
     train_targets = []
-    for t in range(val_end_idx - seq_len, num_days - seq_len):
+    
+    # FIXED: Pushed starting bounds to val_end_idx to completely eliminate sequence overlap/leakage
+    # Adjusted ending threshold to protect against target zero-padding constraints
+    for t in range(val_end_idx, num_days - seq_len - 1):
         train_inputs.append(X_tensor[t : t + seq_len])
         train_targets.append(Y_tensor[t : t + seq_len])
         
@@ -91,15 +112,16 @@ def main():
     batch_size = 256
     num_samples = train_inputs.size(0)
     
-    # Noise Regularization Parameters
     input_noise_std = 0.01
     gradient_noise_std = 1e-5
     
-    # Active features mask for input noise to protect zero padding
-    mask = torch.zeros(1024, dtype=torch.bfloat16, device=device)
+    mask = torch.zeros(3072, dtype=torch.bfloat16, device=device)
     mask[:num_tickers] = 1.0
     mask[500 : 500 + num_tickers] = 1.0
     mask[1000 : 1000 + len(macro_cols)] = 1.0
+    mask[1100 : 1100 + num_tickers] = 1.0
+    mask[1600 : 1600 + num_tickers] = 1.0
+    mask[2100 : 2100 + num_tickers] = 1.0
     
     for seed_idx, seed in enumerate(seeds, 1):
         print(f"\n--- Training Model {seed_idx}/{num_seeds} (Seed: {seed}) ---")
@@ -107,7 +129,7 @@ def main():
         np.random.seed(seed)
         random.seed(seed)
         
-        model = StockTransformer(d_feat=1024, seq_len=seq_len).to(device=device, dtype=torch.bfloat16)
+        model = StockTransformer(d_feat=3072, seq_len=seq_len).to(device=device, dtype=torch.bfloat16)
         optimizer = optim.AdamW(model.parameters(), lr=1e-5, weight_decay=1e-2)
         loss_fn = nn.BCEWithLogitsLoss(reduction='none')
         
@@ -117,10 +139,9 @@ def main():
             epoch_loss = 0.0
             for i in range(0, num_samples, batch_size):
                 batch_idx = indices[i : i + batch_size]
-                bx = train_inputs[batch_idx].clone()  # Clone to avoid in-place corruption of train_inputs
+                bx = train_inputs[batch_idx].clone()  
                 by = train_targets[batch_idx]
                 
-                # Input Noise Injection
                 if input_noise_std > 0:
                     bx = bx + torch.randn_like(bx) * input_noise_std * mask
                 
@@ -132,7 +153,6 @@ def main():
                     
                 loss.backward()
                 
-                # Gradient Noise Injection
                 if gradient_noise_std > 0:
                     for param in model.parameters():
                         if param.grad is not None:
@@ -160,7 +180,7 @@ def main():
     print("\nRunning backtest with the ensemble of models...")
     models = []
     for seed in seeds:
-        m = StockTransformer(d_feat=1024, seq_len=seq_len).to(device=device, dtype=torch.bfloat16)
+        m = StockTransformer(d_feat=3072, seq_len=seq_len).to(device=device, dtype=torch.bfloat16)
         checkpoint_path = f'{checkpoints_dir}/stock_transformer_seed_{seed}.pt'
         checkpoint = torch.load(checkpoint_path)
         m.load_state_dict(checkpoint['model_state_dict'])
@@ -171,6 +191,7 @@ def main():
     benchmark_capital = 1.0
     
     with torch.no_grad():
+        # Evaluating across the strict validation slice
         for t in range(seq_len - 1, val_end_idx - 1):
             seq_x = X_tensor[t - seq_len + 1 : t + 1].unsqueeze(0) 
             

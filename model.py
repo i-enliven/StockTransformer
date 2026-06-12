@@ -3,7 +3,7 @@ import torch.nn as nn
 import transformer_engine.pytorch as te
 
 class StockTransformer(nn.Module):
-    def __init__(self, d_feat=1024, d_model=256, nhead=4, num_layers=4, ffn_hidden_size=512, seq_len=64, dropout=0.2):
+    def __init__(self, d_feat=3072, d_model=256, nhead=4, num_layers=4, ffn_hidden_size=512, seq_len=64, dropout=0.2):
         super().__init__()
         self.d_feat = d_feat
         self.d_model = d_model
@@ -23,8 +23,7 @@ class StockTransformer(nn.Module):
                 ffn_hidden_size=ffn_hidden_size,
                 num_attention_heads=nhead,
                 self_attn_mask_type='causal',
-                # FIXED: Changed from 'bsd' to 'bshd' to satisfy DotProductAttention constraints
-                attn_input_format='bshd',
+                attn_input_format='bshd',  # Satisfies DotProductAttention constraints
                 bias=True,
                 hidden_dropout=dropout,
                 attention_dropout=dropout
@@ -36,8 +35,17 @@ class StockTransformer(nn.Module):
         self.output_proj = te.Linear(d_model, 512, bias=True) # Project back to 512 channel space
         
     def forward(self, x):
-        # x expected layout from training loop: [batch_size, seq_len, 1024]
+        # x input layout: [batch_size, seq_len, current_features]
         b, s, f = x.shape
+        
+        # DYNAMIC PADDING: If input features < d_feat, pad with trailing zeros
+        if f < self.d_feat:
+            padding_size = self.d_feat - f
+            padding = torch.zeros(b, s, padding_size, dtype=x.dtype, device=x.device)
+            x = torch.cat([x, padding], dim=-1)
+        elif f > self.d_feat:
+            # Fallback in case features somehow exceed d_feat
+            x = x[:, :, :self.d_feat]
         
         h = self.input_proj(x)
         h = h + self.pos_embed[:, :s, :]

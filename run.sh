@@ -3,8 +3,8 @@
 # Clear or initialize the output file before starting the new experiment
 > signal.txt
 
-for run in {1..13}; do 
-    echo "=== Starting Run $run/13 ==="
+for run in {1..7}; do 
+    echo "=== Starting Run $run/7 ==="
     
     # 1. Run training. If it fails, print an error but do not crash the loop.
     if ! uv run python train.py; then
@@ -22,8 +22,7 @@ for run in {1..13}; do
 done
 
 echo -e "\n=== Summary Results ==="
-awk '{count[$3]++} END {for (val in count) print val, count[val]}' signal.txt | sort -k2 -nr
-
-echo ;
-
 sort -t':' -k3,3 -nr signal.txt | head -n 10
+
+# awk '{count[$3]++} END {for (val in count) print val, count[val]}' signal.txt | sort -k2 -nr | head -n 10
+# echo ;

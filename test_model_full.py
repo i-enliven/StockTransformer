@@ -4,13 +4,13 @@ import transformer_engine.pytorch as te
 import transformer_engine.common.recipe as recipe
 
 class StockTransformer(nn.Module):
-    def __init__(self, num_tickers=500, d_model=256, nhead=8, num_layers=4, ffn_hidden_size=1024, seq_len=64):
+    def __init__(self, d_feat=3072, num_tickers=500, d_model=256, nhead=8, num_layers=4, ffn_hidden_size=1024, seq_len=64):
         super().__init__()
         self.num_tickers = num_tickers
         self.d_model = d_model
         
         # Input projection
-        self.input_proj = te.Linear(1024, d_model, bias=True)
+        self.input_proj = te.Linear(d_feat, d_model, bias=True)
         
         # Positional Encoding
         self.pos_embed = nn.Parameter(torch.zeros(1, seq_len, d_model))
@@ -44,13 +44,13 @@ class StockTransformer(nn.Module):
 
 def main():
     # Instantiate model
-    model = StockTransformer(seq_len=64).cuda().to(dtype=torch.bfloat16)
+    model = StockTransformer(d_feat=3072, seq_len=64).cuda().to(dtype=torch.bfloat16)
     
     # Recipe
     r = recipe.NVFP4BlockScaling(disable_rht=True)
     
-    # Input tensor: batch=8, seq_len=64, features=1024
-    x = torch.randn(8, 64, 1024, device='cuda', dtype=torch.bfloat16)
+    # Input tensor: batch=8, seq_len=64, features=3072
+    x = torch.randn(8, 64, 3072, device='cuda', dtype=torch.bfloat16)
     
     # Forward pass
     with te.autocast(enabled=True, recipe=r):
