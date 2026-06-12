@@ -103,25 +103,32 @@ def main():
     X_tensor = torch.tensor(padded_returns, dtype=torch.bfloat16, device=device)
     Y_tensor = torch.tensor(padded_targets, dtype=torch.bfloat16, device=device)
 
-    # 3. Secure Train / Test split chronologically
-    val_ratio = 0.10
-    val_end_idx = int(num_days * val_ratio)
+    # 3. Secure Train / Val split chronologically (Past -> Future)
+    train_ratio = 0.90
+    train_end_idx = int(num_days * train_ratio)
     seq_len = 64 
 
-    train_inputs = []
-    train_targets = []
+    train_inputs, train_targets = [], []
+    val_inputs, val_targets = [], []
     
-    # FIXED: Pushed starting bounds to val_end_idx to completely eliminate sequence overlap/leakage
-    # Adjusted ending threshold to protect against target zero-padding constraints
-    for t in range(val_end_idx, num_days - seq_len - 1):
+    # Train on the first 90%
+    for t in range(0, train_end_idx - seq_len):
         train_inputs.append(X_tensor[t : t + seq_len])
         train_targets.append(Y_tensor[t : t + seq_len])
+        
+    # Validate on the final 10%
+    for t in range(train_end_idx, num_days - seq_len):
+        val_inputs.append(X_tensor[t : t + seq_len])
+        val_targets.append(Y_tensor[t : t + seq_len])
         
     train_inputs = torch.stack(train_inputs) 
     train_targets = torch.stack(train_targets) 
     
-    # Recipe for FP4 Block Scaling on Blackwell GPUs
-    r = recipe.NVFP4BlockScaling(disable_rht=True)
+    val_inputs = torch.stack(val_inputs)
+    val_targets = torch.stack(val_targets)
+    
+    # Recipe for FP8 Block Scaling on Blackwell GPUs
+    r = recipe.DelayedScaling(fp8_format=recipe.Format.E4M3)
 
     # 4. Ensemble Training Loop
     num_seeds = 3
@@ -160,6 +167,9 @@ def main():
         for epoch in range(1, epochs + 1):
             indices = torch.randperm(num_samples)
             epoch_loss = 0.0
+            
+            # --- Training Pass ---
+            model.train()
             for i in range(0, num_samples, batch_size):
                 batch_idx = indices[i : i + batch_size]
                 bx = train_inputs[batch_idx].clone()  
@@ -186,8 +196,17 @@ def main():
                 epoch_loss += loss.item() * len(batch_idx)
                 
             epoch_loss /= num_samples
-            if epoch % 100 == 0 or epoch == 1:
-                print(f"Epoch {epoch:03d}/{epochs:03d} | Train BCE Loss: {epoch_loss:.6f}")
+            
+            # --- Validation Pass ---
+            model.eval()
+            with torch.no_grad():
+                with te.autocast(enabled=True, recipe=r):
+                    val_out = model(val_inputs)
+                    val_raw_loss = loss_fn(val_out.float(), val_targets.float())
+                    val_loss = val_raw_loss[:, :, :num_tickers].mean().item()
+            
+            if epoch % 50 == 0 or epoch == 1:
+                print(f"Epoch {epoch:03d}/{epochs:03d} | Train BCE: {epoch_loss:.6f} | Val BCE: {val_loss:.6f}")
                 
         checkpoint = {
             'model_state_dict': model.state_dict(),
@@ -214,9 +233,9 @@ def main():
     benchmark_capital = 1.0
     
     with torch.no_grad():
-        # Evaluating across the strict validation slice
-        for t in range(seq_len - 1, val_end_idx - 1):
-            seq_x = X_tensor[t - seq_len + 1 : t + 1].unsqueeze(0) 
+        # Evaluating across the strict validation slice (chronological future)
+        for t in range(train_end_idx + seq_len - 1, num_days - 1):
+            seq_x = X_tensor[t - seq_len + 1 : t + 1].unsqueeze(0)
             
             ensemble_probs = np.zeros(num_tickers)
             for m in models:

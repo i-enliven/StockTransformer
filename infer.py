@@ -125,7 +125,7 @@ def main():
     X_tensor = torch.tensor(padded_returns, dtype=torch.bfloat16, device=device)
     
     # 4. Model inference across ensemble
-    r = recipe.NVFP4BlockScaling(disable_rht=True)
+    r = recipe.DelayedScaling(fp8_format=recipe.Format.E4M3)
     ensemble_probs = np.zeros(num_tickers, dtype=np.float32)
     
     with torch.no_grad():

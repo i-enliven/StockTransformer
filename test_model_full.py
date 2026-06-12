@@ -47,7 +47,7 @@ def main():
     model = StockTransformer(d_feat=3072, seq_len=64).cuda().to(dtype=torch.bfloat16)
     
     # Recipe
-    r = recipe.NVFP4BlockScaling(disable_rht=True)
+    r = recipe.DelayedScaling(fp8_format=recipe.Format.E4M3)
     
     # Input tensor: batch=8, seq_len=64, features=3072
     x = torch.randn(8, 64, 3072, device='cuda', dtype=torch.bfloat16)

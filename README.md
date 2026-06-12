@@ -21,8 +21,8 @@ ArcLLM is a quantitative research framework for training, evaluating, and runnin
    * Integrates macro features (`macro_close.csv`): Bitcoin (BTC-USD), Ethereum (ETH-USD), Gold (GC=F), Brent Crude (BZ=F), US Dollar Index (DX-Y.NYB), 10-Year Treasury Yield (^TNX), and the CBOE Volatility Index (^VIX).
    * Models raw features strictly as log-returns with clipping protection for zero/null volumes.
 
-4. **Blackwell FP4 Quantization:**
-   * Utilizes NVIDIA Transformer Engine autocasting with the `NVFP4BlockScaling` recipe for hardware-accelerated, low-precision operations.
+4. **FP8 Quantization:**
+   * Utilizes NVIDIA Transformer Engine autocasting with the `DelayedScaling` recipe for standard 8-bit hardware-accelerated precision operations.
 
 ---
 
