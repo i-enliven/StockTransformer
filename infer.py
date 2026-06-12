@@ -15,7 +15,8 @@ def main():
     
     if os.path.exists(checkpoints_dir):
         # Seed list from running this file and selecting the seeds that gave the best test results. <3
-        seeds = [2158]
+        seeds = [2158, 9398, 5876]
+
         # seeds = [1297, 7553, 9398, 1723, 5269, 6424, 801] 
         # Load all seeds from the checkpoints directory
         # seeds = [ int(seed) for seed in re.findall(r'\d+', str(glob.glob(os.path.join(checkpoints_dir, '*.pt'))))]
