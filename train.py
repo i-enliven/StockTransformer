@@ -14,13 +14,13 @@ import shutil
 def main():
     # Setup/clean checkpoints directory
     checkpoints_dir = '/home/ienliven/Projects/arcllm/checkpoints'
-    if os.path.exists(checkpoints_dir):
-        shutil.rmtree(checkpoints_dir)
-    os.makedirs(checkpoints_dir)
+    # if os.path.exists(checkpoints_dir):
+    #     shutil.rmtree(checkpoints_dir)
+    # os.makedirs(checkpoints_dir)
     
     torch.backends.cudnn.deterministic = False
     
-    # 1. Load data and compute log-returns
+    # # 1. Load data and compute log-returns
     df_close = pd.read_csv('/home/ienliven/Projects/arcllm/sp500_close.csv')
     df_volume = pd.read_csv('/home/ienliven/Projects/arcllm/sp500_volume.csv')
     df_macro = pd.read_csv('/home/ienliven/Projects/arcllm/macro_close.csv')
@@ -130,12 +130,13 @@ def main():
     # Recipe for FP8 Block Scaling on Blackwell GPUs
     r = recipe.DelayedScaling(fp8_format=recipe.Format.E4M3)
 
+    # COMMENT THIS OUT AND UNCOMMENT BELOW TO LOAD PREVIOUSLY TRAINED MODEL
     # 4. Ensemble Training Loop
     num_seeds = 3
     seeds = [random.randint(1, 10000) for _ in range(num_seeds)]
     print(f"Training ensemble of {num_seeds} models with seeds: {seeds}")
     
-    epochs = 300
+    epochs = 400
     batch_size = 256
     num_samples = train_inputs.size(0)
     
@@ -217,10 +218,15 @@ def main():
         checkpoint_path = f'{checkpoints_dir}/stock_transformer_seed_{seed}.pt'
         torch.save(checkpoint, checkpoint_path)
         print(f"Saved checkpoint to {checkpoint_path}")
+    # END COMMENT TRAINING LOOP
 
     # ---------------------------------------------------------
     # STEP 5: Backtest with Rank Hysteresis & Friction
     # ---------------------------------------------------------
+    
+    # COMMENT THIS OUT AND UNCOMMENT ABOVE TO TRAIN A NEW MODEL
+    # seeds = [COPY-SEEDS-FROM-CLI-LOGS]
+
     print("\nRunning backtest with the ensemble of models...")
     models = []
     for seed in seeds:
@@ -235,12 +241,12 @@ def main():
     portfolio_capital = 1.0
     benchmark_capital = 1.0
     
-    # Friction parameters (10 bps)
-    friction_bps = 0.0010 
+    # Friction parameters (10 bps = 0.0010)
+    friction_bps = 0.0010
     
     # Hysteresis parameters
-    K_target = 50
-    drop_threshold = 100
+    K_target = 20
+    drop_threshold = 200
     previous_portfolio = set()
     turnover_history = []
     
@@ -297,6 +303,7 @@ def main():
             previous_portfolio = current_portfolio
 
     print("Backtest complete!")
+    print(f"Final Ensemble Portfolio Capital (before friction): {portfolio_capital * np.exp(np.mean(turnover_history) * friction_bps * 100):.4f}")
     print(f"Final Ensemble Portfolio Capital (after friction): {portfolio_capital:.4f}")
     print(f"Final S&P 500 Benchmark Capital: {benchmark_capital:.4f}")
     print(f"Average Daily Turnover: {np.mean(turnover_history) * 100:.2f}%")

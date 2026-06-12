@@ -3,7 +3,7 @@ import torch.nn as nn
 import transformer_engine.pytorch as te
 
 class StockTransformer(nn.Module):
-    def __init__(self, d_feat=3072, d_model=512, nhead=8, num_layers=6, ffn_hidden_size=2048, seq_len=64, dropout=0.2):
+    def __init__(self, d_feat=3072, d_model=512, nhead=8, num_layers=6, ffn_hidden_size=None, seq_len=64, dropout=0.2):
         super().__init__()
         self.d_feat = d_feat
         self.d_model = d_model
@@ -16,6 +16,10 @@ class StockTransformer(nn.Module):
         self.pos_embed = nn.Parameter(torch.zeros(1, seq_len, d_model))
         self.dropout = nn.Dropout(p=dropout)
         
+        # FFN Size: 4x expansion
+        if ffn_hidden_size is None:
+            ffn_hidden_size = d_model * 4
+
         # Transformer Layers
         self.layers = nn.ModuleList([
             te.TransformerLayer(
